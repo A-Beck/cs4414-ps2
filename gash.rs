@@ -110,13 +110,23 @@ impl Shell {
          let mut argv: ~[~str] =
             cmd_line.split(' ').filter_map(|x| if x != "" { Some(x.to_owned()) } else { None }).to_owned_vec();
     
-        if argv.len() > 1 {
+        if argv.len() > 0 {
+
+            if argv.len() == 1 {
+                self.go_to_home_dir();
+                return ;
+            }
+
             let string: ~str = argv.remove(1);
+            if string == ~"$home" || string == ~"$home"{
+                self.go_to_home_dir();
+                return ;
+            }
             let path = ~Path::new(string);
             if (path.exists()){
                 let success = std::os::change_dir(path);
                 if !success {
-                    println("Invalid path!");
+                    println("Invalid path");
                 }
             }
         }
@@ -124,6 +134,18 @@ impl Shell {
             println("Invalid input");
         }
     }
+
+    fn go_to_home_dir(&mut self){
+        match std::os::homedir() {
+            Some(path) => {
+                    std::os::change_dir(~path);
+               }
+             None => {
+                    println("$HOME is not set");
+               }
+         }
+    }
+
 }
 
 fn get_cmdline_from_args() -> Option<~str> {
