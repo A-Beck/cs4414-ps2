@@ -18,12 +18,15 @@ use extra::getopts;
 
 struct Shell {
     cmd_prompt: ~str,
+    log:        ~[~str],
 }
 
 impl Shell {
+
     fn new(prompt_str: &str) -> Shell {
         Shell {
             cmd_prompt: prompt_str.to_owned(),
+            log: ~[],
         }
     }
     
@@ -41,7 +44,18 @@ impl Shell {
             match program {
                 ""      =>  { continue; }
                 "exit"  =>  { return; }
-                _       =>  { self.run_cmdline(cmd_line); }
+                "history" => {
+                    self.log.push(cmd_line.to_owned());
+                    self.run_history();
+                }
+                "cd" => {
+                    self.log.push(cmd_line.to_owned());
+                    self.run_cd(cmd_line.to_owned());
+                }
+                _       =>  { 
+                    self.log.push(cmd_line.to_owned());
+                    self.run_cmdline(cmd_line); 
+                }
             }
         }
     }
@@ -68,6 +82,14 @@ impl Shell {
         let ret = run::process_output("which", [cmd_path.to_owned()]);
         return ret.expect("exit code error.").status.success();
     }
+
+    fn run_history(&mut self){
+        for i in range(0, self.log.len()) { 
+            println!("{}", self.log[i]);
+        }
+    }
+
+    fn run_cd(&mut self, cmd_line: &str) {}
 }
 
 fn get_cmdline_from_args() -> Option<~str> {
