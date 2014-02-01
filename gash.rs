@@ -63,11 +63,28 @@ impl Shell {
     fn run_cmdline(&mut self, cmd_line: &str) {
         let mut argv: ~[~str] =
             cmd_line.split(' ').filter_map(|x| if x != "" { Some(x.to_owned()) } else { None }).to_owned_vec();
-    
+
+	let length = argv.len()-1;
+
+    	if argv[length] == ~"&" {
+	    argv.remove(length);
+            let program: ~str = argv.remove(0);
+	    let argv2 = argv.clone();
+	    if self.cmd_exists(program){
+	
+		spawn(proc() {run::process_status(program, argv2);});
+		
+	    }
+            else {
+		println!("{:s}: command not found", program);
+            }
+	}
+	else{
         if argv.len() > 0 {
             let program: ~str = argv.remove(0);
             self.run_cmd(program, argv);
         }
+	}
     }
     
     fn run_cmd(&mut self, program: &str, argv: &[~str]) {
