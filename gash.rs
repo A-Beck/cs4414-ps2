@@ -34,12 +34,12 @@ impl Shell {
         let mut stdin = BufferedReader::new(stdin());
         
         loop {
-            print(self.cmd_prompt);
+            print(self.cmd_prompt); // prints 'gash >'
             io::stdio::flush();
             
-            let line = stdin.read_line().unwrap();
-            let cmd_line = line.trim().to_owned();
-            let program = cmd_line.splitn(' ', 1).nth(0).expect("no program");
+            let line = stdin.read_line().unwrap(); // reads whats on the line
+            let cmd_line = line.trim().to_owned();  // removes leading and trailing whitespace
+            let program = cmd_line.splitn(' ', 1).nth(0).expect("no program");  // get command
             
             match program {
                 ""      =>  { continue; }
@@ -50,7 +50,7 @@ impl Shell {
                 }
                 "cd" => {
                     self.log.push(cmd_line.to_owned());
-                    self.run_cd(cmd_line.to_owned());
+                    self.run_cd(cmd_line);
                 }
                 _       =>  { 
                     self.log.push(cmd_line.to_owned());
@@ -89,7 +89,24 @@ impl Shell {
         }
     }
 
-    fn run_cd(&mut self, cmd_line: &str) {}
+    fn run_cd(&mut self, cmd_line: &str) {
+         let mut argv: ~[~str] =
+            cmd_line.split(' ').filter_map(|x| if x != "" { Some(x.to_owned()) } else { None }).to_owned_vec();
+    
+        if argv.len() > 1 {
+            let string: ~str = argv.remove(1);
+            let path = ~Path::new(string);
+            if (path.exists()){
+                let success = std::os::change_dir(path);
+                if !success {
+                    println("Invalid path!");
+                }
+            }
+        }
+        else {
+            println("Invalid input");
+        }
+    }
 }
 
 fn get_cmdline_from_args() -> Option<~str> {
