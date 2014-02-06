@@ -39,11 +39,52 @@ impl Shell {
             
             let line = stdin.read_line().unwrap(); // reads whats on the line
             let cmd_line = line.trim().to_owned();  // removes leading and trailing whitespace
-            let program = cmd_line.splitn(' ', 1).nth(0).expect("no program");  // get command
+            let user_input: ~[&str] = cmd_line.split(' ').collect();
+            let mut index: uint = 0;
+
+            for &string in user_input.iter(){
+                let mut prog : ~str;    // saves command
+                let mut input : ~str;
+                let mut index1 : uint;
+                let mut index2 : uint;
+                let mut index3 : uint;
+                let mut index4 : uint;
+
+                match string {
+                    "<" => {
+                        let file  = user_input[index+1].to_owned(); // get file name
+                        println(file);
+                    }
+                    ">" => {
+
+                    }
+                    "|" => {
+
+                    }
+                    _ => {
+
+                    }
+                }
+                index += 1;
+            }
+
+
+            let result = self.find_prog(cmd_line);
+            match result {
+                ~"return" => {return}
+                ~"continue" => {continue;}
+                _          => {continue;}
+            }
             
-            match program {
-                ""      =>  { continue; }
-                "exit"  =>  { return; }
+        }
+    }
+    
+    fn find_prog(&mut self, cmd_line : &str) -> ~str{
+         let program = cmd_line.splitn(' ', 1).nth(0).expect("no program"); // get command
+
+         match program {
+                ""      =>  { return ~"continue"; }
+                "exit"  =>  { return ~"return"; }
                 "history" => {
                     self.log.push(cmd_line.to_owned());
                     self.run_history();
@@ -57,9 +98,9 @@ impl Shell {
                     self.run_cmdline(cmd_line); 
                 }
             }
-        }
+        ~"fine"
     }
-    
+
     fn run_cmdline(&mut self, cmd_line: &str) {
         let mut argv: ~[~str] =
             cmd_line.split(' ').filter_map(|x| if x != "" { Some(x.to_owned()) } else { None }).to_owned_vec();
@@ -118,7 +159,7 @@ impl Shell {
             }
 
             let string: ~str = argv.remove(1);
-            if string == ~"$home" || string == ~"$home"{
+            if string == ~"$HOME" || string == ~"$home"{
                 self.go_to_home_dir();
                 return ;
             }
