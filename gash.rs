@@ -16,7 +16,7 @@ use std::io::buffered::BufferedReader;
 use std::io::stdin;
 use extra::getopts;
 use std::io::File;
-use std::io::{File, io_error, Open, ReadWrite};
+
 
 struct Shell {
     cmd_prompt: ~str,
@@ -43,42 +43,43 @@ impl Shell {
             let cmd_line = line.trim().to_owned();  // removes leading and trailing whitespace
             let user_input: ~[&str] = cmd_line.split(' ').collect();
             let mut index: uint = 0;
+            let mut line: ~str = ~"";
 
             for &string in user_input.iter(){
-                let mut prog : ~str;    // saves command
-                let mut input : ~str;
-                let mut index1 : uint;
-                let mut index2 : uint;
-                let mut index3 : uint;
-                let mut index4 : uint;
 
                 match string {
+
                     "<" => {
                         let file  = user_input[index+1].to_owned(); // get file name
-                        println(file);
-                    }
-                    ">" => {
-			let file = user_input[index + 1].to_owned();
-			let command = user_input[index - 1].to_owned();
-			let mut write_str = self.find_prog(command, true).to_owned();
-			let path = Path::new(file.clone());
-			let mut write_fn = File::open_mode(&path, Open, ReadWrite);
-			write_fn.write(write_str.as_bytes());
-			
-			
-                    }
-                    "|" => {
+                        let message = read_file(file);
+                        println(message);
 
+                        line = ~"";
+                    }
+
+                    ">" => {
+			            let file = user_input[index + 1].to_owned();
+			            let command = line.trim().to_owned();
+			            let message = self.find_prog(command, true).to_owned();
+                        write_file(file,message);
+                        line = ~"";
+                        user_input.iter().next();
+                    }
+
+                    "|" => {
+                        let command = line.trim().to_owned();
+                        let message = self.find_prog(command, true).to_owned();
+                        println(message);
+                        line = ~"";
                     }
                     _ => {
-
+                        line = line + " " + string;
                     }
                 }
                 index += 1;
             }
 
-
-            let result = self.find_prog(cmd_line,false);
+            let result = self.find_prog(line.trim(),false);
             match result {
                 ~"return" => {return}
                 ~"continue" => {continue;}
@@ -209,7 +210,7 @@ impl Shell {
     fn go_to_home_dir(&mut self){
         match std::os::homedir() {
             Some(path) => {
-                    std::os::change_dir(~path);
+                    std::os::change_dir(&path);
                }
              None => {
                     println("$HOME is not set");
@@ -217,6 +218,34 @@ impl Shell {
          }
     }
 
+}
+
+fn write_file(filename: ~str, message: ~str){
+
+    match File::create(&Path::new(filename)) {
+        Some(mut file) => {
+            file.write_str(message);
+        }
+        None =>{
+            println("Opening file failed!");
+        }
+    }
+}
+
+fn read_file(filename: ~str) -> ~str{
+
+    let path = Path::new(filename);
+    match File::open(&path) {
+        Some(file) => {
+            let mut reader = BufferedReader::new(file);
+            let input = reader.read_to_str();
+            return input;
+        }
+        None =>{
+            println("Opening file failed");
+            return ~"";
+        }
+    }
 }
 
 fn get_cmdline_from_args() -> Option<~str> {
