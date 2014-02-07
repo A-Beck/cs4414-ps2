@@ -16,6 +16,7 @@ use std::io::buffered::BufferedReader;
 use std::io::stdin;
 use extra::getopts;
 use std::io::File;
+use std::io::signal::{Listener, Interrupt};
 
 
 struct Shell {
@@ -51,6 +52,7 @@ impl Shell {
 
                     "<" => {
                         let file  = user_input[index+1].to_owned(); // get file name
+                        let command = line.trim().to_owned();
                         let message = read_file(file);
                         println(message);
 
@@ -68,8 +70,19 @@ impl Shell {
 
                     "|" => {
                         let command = line.trim().to_owned();
+                        let mut command2: ~str = ~"";
+                        let length = user_input.len();
+
+                        for i in range(index+1,length){
+                            match user_input[i]{
+                                "<" => {break;}
+                                ">" =>{break;}
+                                "|" => {break;}
+                                _   => {command2 = command2 + " " + user_input[i];}
+                            }
+                        }
+                        command2 = command2.trim().to_owned();
                         let message = self.find_prog(command, true).to_owned();
-                        println(message);
                         line = ~"";
                     }
                     _ => {
@@ -274,6 +287,17 @@ fn get_cmdline_from_args() -> Option<~str> {
 
 fn main() {
     let opt_cmd_line = get_cmdline_from_args();
+
+    spawn(proc () {
+    let mut listener = Listener::new();
+        listener.register(Interrupt);
+    loop{
+        match listener.port.recv() {
+            Interrupt => println!("Got interrupt"),
+            _ => (),
+        }
+    }
+   }); 
     
     match opt_cmd_line {
         Some(cmd_line) => {Shell::new("").run_cmdline(cmd_line, false);}
