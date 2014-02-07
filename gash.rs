@@ -15,6 +15,8 @@ use std::{io, run, os};
 use std::io::buffered::BufferedReader;
 use std::io::stdin;
 use extra::getopts;
+use std::io::File;
+use std::io::{File, io_error, Open, ReadWrite};
 
 struct Shell {
     cmd_prompt: ~str,
@@ -56,7 +58,14 @@ impl Shell {
                         println(file);
                     }
                     ">" => {
-
+			let file = user_input[index + 1].to_owned();
+			let command = user_input[index - 1].to_owned();
+			let mut write_str = self.find_prog(command, true).to_owned();
+			let path = Path::new(file.clone());
+			let mut write_fn = File::open_mode(&path, Open, ReadWrite);
+			write_fn.write(write_str.as_bytes());
+			
+			
                     }
                     "|" => {
 
@@ -69,7 +78,7 @@ impl Shell {
             }
 
 
-            let result = self.find_prog(cmd_line);
+            let result = self.find_prog(cmd_line,false);
             match result {
                 ~"return" => {return}
                 ~"continue" => {continue;}
@@ -79,7 +88,7 @@ impl Shell {
         }
     }
     
-    fn find_prog(&mut self, cmd_line : &str) -> ~str{
+    fn find_prog(&mut self, cmd_line : &str, output: bool) -> ~str{
          let program = cmd_line.splitn(' ', 1).nth(0).expect("no program"); // get command
 
          match program {
@@ -87,7 +96,7 @@ impl Shell {
                 "exit"  =>  { return ~"return"; }
                 "history" => {
                     self.log.push(cmd_line.to_owned());
-                    self.run_history();
+                    return self.run_history(output);
                 }
                 "cd" => {
                     self.log.push(cmd_line.to_owned());
@@ -95,13 +104,13 @@ impl Shell {
                 }
                 _       =>  { 
                     self.log.push(cmd_line.to_owned());
-                    self.run_cmdline(cmd_line); 
+                    return self.run_cmdline(cmd_line, output); 
                 }
             }
         ~"fine"
     }
 
-    fn run_cmdline(&mut self, cmd_line: &str) {
+    fn run_cmdline(&mut self, cmd_line: &str, output: bool) -> ~str {
         let mut argv: ~[~str] =
             cmd_line.split(' ').filter_map(|x| if x != "" { Some(x.to_owned()) } else { None }).to_owned_vec();
 
@@ -119,21 +128,32 @@ impl Shell {
             else {
 		println!("{:s}: command not found", program);
             }
+	return ~"none";
 	}
 	else{
         if argv.len() > 0 {
             let program: ~str = argv.remove(0);
-            self.run_cmd(program, argv);
+            return self.run_cmd(program, argv, output);
         }
 	}
+	return ~"none";
     }
     
-    fn run_cmd(&mut self, program: &str, argv: &[~str]) {
+    fn run_cmd(&mut self, program: &str, argv: &[~str], output: bool)->~str {
         if self.cmd_exists(program) {
+	    if output == false {
             run::process_status(program, argv);
+	    return ~"none";
+	    }
+	    else {
+	    	let output = run::process_output(program, argv);
+	  	let output_str = output.unwrap().output;
+		return std::str::from_utf8(output_str).to_owned();
+	    }
         } else {
             println!("{:s}: command not found", program);
         }
+	return ~"none";
     }
     
     fn cmd_exists(&mut self, cmd_path: &str) -> bool {
@@ -141,10 +161,20 @@ impl Shell {
         return ret.expect("exit code error.").status.success();
     }
 
-    fn run_history(&mut self){
-        for i in range(0, self.log.len()) { 
-            println!("{}", self.log[i]);
-        }
+    fn run_history(&mut self, output: bool)-> ~str{
+	if output == false{
+        	for i in range(0, self.log.len()) { 
+            		println!("{}", self.log[i]);
+        	}
+		return ~"none";
+	}
+	else {
+		let mut out: ~str = ~"";
+		for i in range(0, self.log.len()){
+			out = out + self.log[i].to_owned();
+		}
+		return out;
+	}
     }
 
     fn run_cd(&mut self, cmd_line: &str) {
@@ -217,7 +247,7 @@ fn main() {
     let opt_cmd_line = get_cmdline_from_args();
     
     match opt_cmd_line {
-        Some(cmd_line) => Shell::new("").run_cmdline(cmd_line),
-        None           => Shell::new("gash > ").run()
+        Some(cmd_line) => {Shell::new("").run_cmdline(cmd_line, false);}
+        None           => {Shell::new("gash > ").run();}
     }
 }
