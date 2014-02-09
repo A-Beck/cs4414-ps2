@@ -17,6 +17,7 @@ use std::io::stdin;
 use extra::getopts;
 use std::io::File;
 use std::io::signal::{Listener, Interrupt};
+use std::libc;
 
 
 struct Shell {
@@ -127,9 +128,7 @@ impl Shell {
 
             let result = self.find_prog(line.trim(),false);
             match result {
-                ~"return" => {
-                    println("exit pls");
-                    return;}
+                ~"return" => {unsafe{libc::exit(1 as libc::c_int)}}
                 //~"continue" => {continue;}
                 _          => {}
             }
