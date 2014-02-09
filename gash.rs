@@ -43,62 +43,96 @@ impl Shell {
             let line = stdin.read_line().unwrap(); // reads whats on the line
             let cmd_line = line.trim().to_owned();  // removes leading and trailing whitespace
             let user_input: ~[&str] = cmd_line.split(' ').collect();
-            let mut index: uint = 0;
             let mut line: ~str = ~"";
+            let length: uint = user_input.len();
+            let mut i : uint = 0;
 
-            for &string in user_input.iter(){
+            while (i < length){
 
+                let string = user_input[i].clone();
+                let mut input = ~"";
                 match string {
 
                     "<" => {
-                        let file  = user_input[index+1].to_owned(); // get file name
-                        let command = line.trim().to_owned();
-                        let message = read_file(file);
-                        println(message);
+                        if !(i < length-1)
+                            {println!("invalid command");}
 
-                        line = ~"";
+                        let file  = user_input[i+1].to_owned(); // get file name
+                        let command = line.trim().to_owned();
+                        line = command + " " + file;
+                        i += 1;
                     }
 
                     ">" => {
-			            let file = user_input[index + 1].to_owned();
+                        if !(i < length-1)
+                            {println!("invalid command");}
+
+			            let file = user_input[i + 1].to_owned();
 			            let command = line.trim().to_owned();
 			            let message = self.find_prog(command, true).to_owned();
+
+                        if message == ~"none"{
+                            i = length;
+                        }
+
                         write_file(file,message);
                         line = ~"";
-                        user_input.iter().next();
+                        i += 1;
                     }
 
                     "|" => {
+
                         let command = line.trim().to_owned();
                         let mut command2: ~str = ~"";
-                        let length = user_input.len();
 
-                        for i in range(index+1,length){
-                            match user_input[i]{
+                        for k in range(i + 1,length){
+                            match user_input[k]{
                                 "<" => {break;}
                                 ">" =>{break;}
                                 "|" => {break;}
-                                _   => {command2 = command2 + " " + user_input[i];}
+                                _   => {command2 = command2 + " " + user_input[k];}
+                            }
+                            i = k; 
+                        }
+
+                        command2 = command2.trim().to_owned();
+                        let mut message = self.find_prog(command, true).to_owned();
+                        
+                        if message == ~"none"{
+                            i = length;
+                        }
+
+                        match File::create(&Path::new("f.md")) {
+                            Some(mut file) => {
+                                file.write_str(message);
+                            }
+                            None =>{
+                                println("Opening file failed!");
                             }
                         }
-                        command2 = command2.trim().to_owned();
-                        let message = self.find_prog(command, true).to_owned();
+
+                        //println(command2);
+                        message = self.find_prog(command2 + " " + "f.md", true).to_owned();
+                        self.find_prog("rm f.md", true);
+                        println!("{}", message);
                         line = ~"";
                     }
+
                     _ => {
                         line = line + " " + string;
                     }
                 }
-                index += 1;
+                i += 1;
             }
 
             let result = self.find_prog(line.trim(),false);
             match result {
-                ~"return" => {return}
-                ~"continue" => {continue;}
-                _          => {continue;}
+                ~"return" => {
+                    println("exit pls");
+                    return;}
+                //~"continue" => {continue;}
+                _          => {}
             }
-            
         }
     }
     
@@ -134,6 +168,7 @@ impl Shell {
 	    argv.remove(length);
             let program: ~str = argv.remove(0);
 	    let argv2 = argv.clone();
+
 	    if self.cmd_exists(program){
 	
 		spawn(proc() {run::process_status(program, argv2);});
@@ -142,8 +177,10 @@ impl Shell {
             else {
 		println!("{:s}: command not found", program);
             }
+
 	return ~"none";
 	}
+
 	else{
         if argv.len() > 0 {
             let program: ~str = argv.remove(0);
@@ -245,6 +282,7 @@ fn write_file(filename: ~str, message: ~str){
     }
 }
 
+/*
 fn read_file(filename: ~str) -> ~str{
 
     let path = Path::new(filename);
@@ -260,6 +298,7 @@ fn read_file(filename: ~str) -> ~str{
         }
     }
 }
+*/
 
 fn get_cmdline_from_args() -> Option<~str> {
     /* Begin processing program arguments and initiate the parameters. */
@@ -293,7 +332,7 @@ fn main() {
         listener.register(Interrupt);
     loop{
         match listener.port.recv() {
-            Interrupt => println!("Got interrupt"),
+            Interrupt => print!(""),
             _ => (),
         }
     }
